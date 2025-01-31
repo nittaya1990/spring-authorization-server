@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.springframework.security.oauth2.server.authorization.web.authentication;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.entry;
  * @author Anoop Garlapati
  */
 public class ClientSecretPostAuthenticationConverterTests {
+
 	private final ClientSecretPostAuthenticationConverter converter = new ClientSecretPostAuthenticationConverter();
 
 	@Test
@@ -51,11 +52,10 @@ public class ClientSecretPostAuthenticationConverterTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addParameter(OAuth2ParameterNames.CLIENT_ID, "client-1");
 		request.addParameter(OAuth2ParameterNames.CLIENT_ID, "client-2");
-		assertThatThrownBy(() -> this.converter.convert(request))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_REQUEST);
+		assertThatThrownBy(() -> this.converter.convert(request)).isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_REQUEST);
 	}
 
 	@Test
@@ -72,11 +72,10 @@ public class ClientSecretPostAuthenticationConverterTests {
 		request.addParameter(OAuth2ParameterNames.CLIENT_ID, "client-1");
 		request.addParameter(OAuth2ParameterNames.CLIENT_SECRET, "client-secret-1");
 		request.addParameter(OAuth2ParameterNames.CLIENT_SECRET, "client-secret-2");
-		assertThatThrownBy(() -> this.converter.convert(request))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_REQUEST);
+		assertThatThrownBy(() -> this.converter.convert(request)).isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_REQUEST);
 	}
 
 	@Test
@@ -84,10 +83,12 @@ public class ClientSecretPostAuthenticationConverterTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addParameter(OAuth2ParameterNames.CLIENT_ID, "client-1");
 		request.addParameter(OAuth2ParameterNames.CLIENT_SECRET, "client-secret");
-		OAuth2ClientAuthenticationToken authentication = (OAuth2ClientAuthenticationToken) this.converter.convert(request);
+		OAuth2ClientAuthenticationToken authentication = (OAuth2ClientAuthenticationToken) this.converter
+			.convert(request);
 		assertThat(authentication.getPrincipal()).isEqualTo("client-1");
 		assertThat(authentication.getCredentials()).isEqualTo("client-secret");
-		assertThat(authentication.getClientAuthenticationMethod()).isEqualTo(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+		assertThat(authentication.getClientAuthenticationMethod())
+			.isEqualTo(ClientAuthenticationMethod.CLIENT_SECRET_POST);
 	}
 
 	@Test
@@ -95,15 +96,17 @@ public class ClientSecretPostAuthenticationConverterTests {
 		MockHttpServletRequest request = createPkceTokenRequest();
 		request.addParameter(OAuth2ParameterNames.CLIENT_ID, "client-1");
 		request.addParameter(OAuth2ParameterNames.CLIENT_SECRET, "client-secret");
-		OAuth2ClientAuthenticationToken authentication = (OAuth2ClientAuthenticationToken) this.converter.convert(request);
+		request.addParameter("custom-param", "custom-value-1", "custom-value-2");
+		OAuth2ClientAuthenticationToken authentication = (OAuth2ClientAuthenticationToken) this.converter
+			.convert(request);
 		assertThat(authentication.getPrincipal()).isEqualTo("client-1");
 		assertThat(authentication.getCredentials()).isEqualTo("client-secret");
-		assertThat(authentication.getClientAuthenticationMethod()).isEqualTo(ClientAuthenticationMethod.CLIENT_SECRET_POST);
-		assertThat(authentication.getAdditionalParameters())
-				.containsOnly(
-						entry(OAuth2ParameterNames.GRANT_TYPE, AuthorizationGrantType.AUTHORIZATION_CODE.getValue()),
-						entry(OAuth2ParameterNames.CODE, "code"),
-						entry(PkceParameterNames.CODE_VERIFIER, "code-verifier-1"));
+		assertThat(authentication.getClientAuthenticationMethod())
+			.isEqualTo(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+		assertThat(authentication.getAdditionalParameters()).containsOnly(
+				entry(OAuth2ParameterNames.GRANT_TYPE, AuthorizationGrantType.AUTHORIZATION_CODE.getValue()),
+				entry(OAuth2ParameterNames.CODE, "code"), entry(PkceParameterNames.CODE_VERIFIER, "code-verifier-1"),
+				entry("custom-param", new String[] { "custom-value-1", "custom-value-2" }));
 	}
 
 	private static MockHttpServletRequest createPkceTokenRequest() {
@@ -113,4 +116,5 @@ public class ClientSecretPostAuthenticationConverterTests {
 		request.addParameter(PkceParameterNames.CODE_VERIFIER, "code-verifier-1");
 		return request;
 	}
+
 }

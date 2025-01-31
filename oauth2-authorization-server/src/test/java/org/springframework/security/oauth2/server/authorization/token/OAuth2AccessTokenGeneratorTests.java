@@ -20,8 +20,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.springframework.security.core.Authentication;
@@ -29,21 +29,20 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClaimAccessor;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.security.oauth2.core.OAuth2TokenFormat;
-import org.springframework.security.oauth2.core.OAuth2TokenType;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
-import org.springframework.security.oauth2.server.authorization.OAuth2TokenContext;
-import org.springframework.security.oauth2.server.authorization.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.TestOAuth2Authorizations;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.TestRegisteredClients;
-import org.springframework.security.oauth2.server.authorization.config.ProviderSettings;
-import org.springframework.security.oauth2.server.authorization.config.TokenSettings;
-import org.springframework.security.oauth2.server.authorization.context.ProviderContext;
+import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
+import org.springframework.security.oauth2.server.authorization.context.TestAuthorizationServerContext;
+import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,24 +55,29 @@ import static org.mockito.Mockito.verify;
  * @author Joe Grandja
  */
 public class OAuth2AccessTokenGeneratorTests {
-	private OAuth2TokenCustomizer<OAuth2TokenClaimsContext> accessTokenCustomizer;
-	private OAuth2AccessTokenGenerator accessTokenGenerator;
-	private ProviderContext providerContext;
 
-	@Before
+	private OAuth2TokenCustomizer<OAuth2TokenClaimsContext> accessTokenCustomizer;
+
+	private OAuth2AccessTokenGenerator accessTokenGenerator;
+
+	private AuthorizationServerContext authorizationServerContext;
+
+	@BeforeEach
 	public void setUp() {
 		this.accessTokenCustomizer = mock(OAuth2TokenCustomizer.class);
 		this.accessTokenGenerator = new OAuth2AccessTokenGenerator();
 		this.accessTokenGenerator.setAccessTokenCustomizer(this.accessTokenCustomizer);
-		ProviderSettings providerSettings = ProviderSettings.builder().issuer("https://provider.com").build();
-		this.providerContext = new ProviderContext(providerSettings, null);
+		AuthorizationServerSettings authorizationServerSettings = AuthorizationServerSettings.builder()
+			.issuer("https://provider.com")
+			.build();
+		this.authorizationServerContext = new TestAuthorizationServerContext(authorizationServerSettings, null);
 	}
 
 	@Test
 	public void setAccessTokenCustomizerWhenNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> this.accessTokenGenerator.setAccessTokenCustomizer(null))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("accessTokenCustomizer cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("accessTokenCustomizer cannot be null");
 	}
 
 	@Test
@@ -125,20 +129,20 @@ public class OAuth2AccessTokenGeneratorTests {
 		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization(registeredClient).build();
 		Authentication principal = authorization.getAttribute(Principal.class.getName());
 
-		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-				registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
-		OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(
-				OAuth2AuthorizationRequest.class.getName());
-		OAuth2AuthorizationCodeAuthenticationToken authentication =
-				new OAuth2AuthorizationCodeAuthenticationToken("code", clientPrincipal, authorizationRequest.getRedirectUri(), null);
+		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(registeredClient,
+				ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
+		OAuth2AuthorizationRequest authorizationRequest = authorization
+			.getAttribute(OAuth2AuthorizationRequest.class.getName());
+		OAuth2AuthorizationCodeAuthenticationToken authentication = new OAuth2AuthorizationCodeAuthenticationToken(
+				"code", clientPrincipal, authorizationRequest.getRedirectUri(), null);
 
 		// @formatter:off
 		OAuth2TokenContext tokenContext = DefaultOAuth2TokenContext.builder()
 				.registeredClient(registeredClient)
 				.principal(principal)
-				.providerContext(this.providerContext)
+				.authorizationServerContext(this.authorizationServerContext)
 				.authorization(authorization)
-				.authorizedScopes(authorization.getAttribute(OAuth2Authorization.AUTHORIZED_SCOPE_ATTRIBUTE_NAME))
+				.authorizedScopes(authorization.getAuthorizedScopes())
 				.tokenType(OAuth2TokenType.ACCESS_TOKEN)
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.authorizationGrant(authentication)
@@ -149,7 +153,8 @@ public class OAuth2AccessTokenGeneratorTests {
 		assertThat(accessToken).isNotNull();
 
 		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(tokenContext.getRegisteredClient().getTokenSettings().getAccessTokenTimeToLive());
+		Instant expiresAt = issuedAt
+			.plus(tokenContext.getRegisteredClient().getTokenSettings().getAccessTokenTimeToLive());
 		assertThat(accessToken.getIssuedAt()).isBetween(issuedAt.minusSeconds(1), issuedAt.plusSeconds(1));
 		assertThat(accessToken.getExpiresAt()).isBetween(expiresAt.minusSeconds(1), expiresAt.plusSeconds(1));
 		assertThat(accessToken.getScopes()).isEqualTo(tokenContext.getAuthorizedScopes());
@@ -158,10 +163,11 @@ public class OAuth2AccessTokenGeneratorTests {
 		OAuth2TokenClaimAccessor accessTokenClaims = ((ClaimAccessor) accessToken)::getClaims;
 		assertThat(accessTokenClaims.getClaims()).isNotEmpty();
 
-		assertThat(accessTokenClaims.getIssuer().toExternalForm()).isEqualTo(tokenContext.getProviderContext().getIssuer());
+		assertThat(accessTokenClaims.getIssuer().toExternalForm())
+			.isEqualTo(tokenContext.getAuthorizationServerContext().getIssuer());
 		assertThat(accessTokenClaims.getSubject()).isEqualTo(tokenContext.getPrincipal().getName());
-		assertThat(accessTokenClaims.getAudience()).isEqualTo(
-				Collections.singletonList(tokenContext.getRegisteredClient().getClientId()));
+		assertThat(accessTokenClaims.getAudience())
+			.isEqualTo(Collections.singletonList(tokenContext.getRegisteredClient().getClientId()));
 		assertThat(accessTokenClaims.getIssuedAt()).isBetween(issuedAt.minusSeconds(1), issuedAt.plusSeconds(1));
 		assertThat(accessTokenClaims.getExpiresAt()).isBetween(expiresAt.minusSeconds(1), expiresAt.plusSeconds(1));
 		assertThat(accessTokenClaims.getNotBefore()).isBetween(issuedAt.minusSeconds(1), issuedAt.plusSeconds(1));
@@ -170,19 +176,22 @@ public class OAuth2AccessTokenGeneratorTests {
 		Set<String> scopes = accessTokenClaims.getClaim(OAuth2ParameterNames.SCOPE);
 		assertThat(scopes).isEqualTo(tokenContext.getAuthorizedScopes());
 
-		ArgumentCaptor<OAuth2TokenClaimsContext> tokenClaimsContextCaptor = ArgumentCaptor.forClass(OAuth2TokenClaimsContext.class);
+		ArgumentCaptor<OAuth2TokenClaimsContext> tokenClaimsContextCaptor = ArgumentCaptor
+			.forClass(OAuth2TokenClaimsContext.class);
 		verify(this.accessTokenCustomizer).customize(tokenClaimsContextCaptor.capture());
 
 		OAuth2TokenClaimsContext tokenClaimsContext = tokenClaimsContextCaptor.getValue();
 		assertThat(tokenClaimsContext.getClaims()).isNotNull();
 		assertThat(tokenClaimsContext.getRegisteredClient()).isEqualTo(tokenContext.getRegisteredClient());
 		assertThat(tokenClaimsContext.<Authentication>getPrincipal()).isEqualTo(tokenContext.getPrincipal());
-		assertThat(tokenClaimsContext.getProviderContext()).isEqualTo(tokenContext.getProviderContext());
+		assertThat(tokenClaimsContext.getAuthorizationServerContext())
+			.isEqualTo(tokenContext.getAuthorizationServerContext());
 		assertThat(tokenClaimsContext.getAuthorization()).isEqualTo(tokenContext.getAuthorization());
 		assertThat(tokenClaimsContext.getAuthorizedScopes()).isEqualTo(tokenContext.getAuthorizedScopes());
 		assertThat(tokenClaimsContext.getTokenType()).isEqualTo(tokenContext.getTokenType());
 		assertThat(tokenClaimsContext.getAuthorizationGrantType()).isEqualTo(tokenContext.getAuthorizationGrantType());
-		assertThat(tokenClaimsContext.<Authentication>getAuthorizationGrant()).isEqualTo(tokenContext.getAuthorizationGrant());
+		assertThat(tokenClaimsContext.<Authentication>getAuthorizationGrant())
+			.isEqualTo(tokenContext.getAuthorizationGrant());
 	}
 
 }

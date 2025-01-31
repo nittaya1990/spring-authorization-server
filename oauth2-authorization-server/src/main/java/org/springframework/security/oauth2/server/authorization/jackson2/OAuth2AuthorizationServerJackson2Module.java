@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 the original author or authors.
+ * Copyright 2020-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,12 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import org.springframework.security.jackson2.SecurityJackson2Modules;
-import org.springframework.security.oauth2.core.OAuth2TokenFormat;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2TokenExchangeActor;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2TokenExchangeCompositeAuthenticationToken;
+import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
 
 /**
  * Jackson {@code Module} for {@code spring-authorization-server}, that registers the
@@ -37,9 +39,11 @@ import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
  * <li>{@link UnmodifiableMapMixin}</li>
  * <li>{@link HashSetMixin}</li>
  * <li>{@link OAuth2AuthorizationRequestMixin}</li>
+ * <li>{@link OAuth2TokenExchangeCompositeAuthenticationTokenMixin}</li>
  * <li>{@link DurationMixin}</li>
  * <li>{@link JwsAlgorithmMixin}</li>
  * <li>{@link OAuth2TokenFormatMixin}</li>
+ * <li>{@link StringArrayMixin}</li>
  * </ul>
  *
  * If not already enabled, default typing will be automatically enabled as type info is
@@ -63,6 +67,7 @@ import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
  * @see DurationMixin
  * @see JwsAlgorithmMixin
  * @see OAuth2TokenFormatMixin
+ * @see StringArrayMixin
  */
 public class OAuth2AuthorizationServerJackson2Module extends SimpleModule {
 
@@ -77,11 +82,15 @@ public class OAuth2AuthorizationServerJackson2Module extends SimpleModule {
 				UnmodifiableMapMixin.class);
 		context.setMixInAnnotations(HashSet.class, HashSetMixin.class);
 		context.setMixInAnnotations(LinkedHashSet.class, HashSetMixin.class);
+		context.setMixInAnnotations(OAuth2TokenExchangeActor.class, OAuth2TokenExchangeActorMixin.class);
 		context.setMixInAnnotations(OAuth2AuthorizationRequest.class, OAuth2AuthorizationRequestMixin.class);
+		context.setMixInAnnotations(OAuth2TokenExchangeCompositeAuthenticationToken.class,
+				OAuth2TokenExchangeCompositeAuthenticationTokenMixin.class);
 		context.setMixInAnnotations(Duration.class, DurationMixin.class);
 		context.setMixInAnnotations(SignatureAlgorithm.class, JwsAlgorithmMixin.class);
 		context.setMixInAnnotations(MacAlgorithm.class, JwsAlgorithmMixin.class);
 		context.setMixInAnnotations(OAuth2TokenFormat.class, OAuth2TokenFormatMixin.class);
+		context.setMixInAnnotations(String[].class, StringArrayMixin.class);
 	}
 
 }

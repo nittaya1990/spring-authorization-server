@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -35,17 +35,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author Alexey Nesterov
  */
 public class OAuth2ClientCredentialsAuthenticationTokenTests {
+
 	private final RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
+
 	private final OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-			this.registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, this.registeredClient.getClientSecret());
+			this.registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+			this.registeredClient.getClientSecret());
+
 	private Set<String> scopes = Collections.singleton("scope1");
+
 	private Map<String, Object> additionalParameters = Collections.singletonMap("param1", "value1");
 
 	@Test
 	public void constructorWhenClientPrincipalNullThenThrowIllegalArgumentException() {
-		assertThatThrownBy(() -> new OAuth2ClientCredentialsAuthenticationToken(null, this.scopes, this.additionalParameters))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("clientPrincipal cannot be null");
+		assertThatThrownBy(
+				() -> new OAuth2ClientCredentialsAuthenticationToken(null, this.scopes, this.additionalParameters))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("clientPrincipal cannot be null");
 	}
 
 	@Test
@@ -73,4 +79,5 @@ public class OAuth2ClientCredentialsAuthenticationTokenTests {
 		assertThat(authentication.getScopes()).isEqualTo(expectedScopes);
 		assertThat(authentication.getAdditionalParameters()).isEqualTo(this.additionalParameters);
 	}
+
 }

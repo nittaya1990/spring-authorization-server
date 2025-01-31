@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.lang.Nullable;
-import org.springframework.security.oauth2.server.authorization.OAuth2TokenContext;
 import org.springframework.util.Assert;
 
 /**
@@ -31,6 +30,7 @@ import org.springframework.util.Assert;
  * @see OAuth2TokenContext
  */
 public final class DefaultOAuth2TokenContext implements OAuth2TokenContext {
+
 	private final Map<Object, Object> context;
 
 	private DefaultOAuth2TokenContext(Map<Object, Object> context) {
@@ -52,7 +52,6 @@ public final class DefaultOAuth2TokenContext implements OAuth2TokenContext {
 
 	/**
 	 * Returns a new {@link Builder}.
-	 *
 	 * @return the {@link Builder}
 	 */
 	public static Builder builder() {
@@ -69,9 +68,9 @@ public final class DefaultOAuth2TokenContext implements OAuth2TokenContext {
 
 		/**
 		 * Builds a new {@link DefaultOAuth2TokenContext}.
-		 *
 		 * @return the {@link DefaultOAuth2TokenContext}
 		 */
+		@Override
 		public DefaultOAuth2TokenContext build() {
 			return new DefaultOAuth2TokenContext(getContext());
 		}

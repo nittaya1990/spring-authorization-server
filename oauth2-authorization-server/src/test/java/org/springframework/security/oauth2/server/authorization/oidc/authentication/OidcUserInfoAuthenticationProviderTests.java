@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
-import org.springframework.security.oauth2.core.OAuth2TokenType;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
@@ -38,6 +37,7 @@ import org.springframework.security.oauth2.jwt.JoseHeaderNames;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.TestOAuth2Authorizations;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
@@ -45,10 +45,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link OidcUserInfoAuthenticationProvider}.
@@ -56,10 +56,12 @@ import static org.mockito.Mockito.when;
  * @author Steve Riesenberg
  */
 public class OidcUserInfoAuthenticationProviderTests {
+
 	private OAuth2AuthorizationService authorizationService;
+
 	private OidcUserInfoAuthenticationProvider authenticationProvider;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		this.authorizationService = mock(OAuth2AuthorizationService.class);
 		this.authenticationProvider = new OidcUserInfoAuthenticationProvider(this.authorizationService);
@@ -67,16 +69,14 @@ public class OidcUserInfoAuthenticationProviderTests {
 
 	@Test
 	public void constructorWhenAuthorizationServiceNullThenThrowIllegalArgumentException() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcUserInfoAuthenticationProvider(null))
-				.withMessage("authorizationService cannot be null");
+		assertThatIllegalArgumentException().isThrownBy(() -> new OidcUserInfoAuthenticationProvider(null))
+			.withMessage("authorizationService cannot be null");
 	}
 
 	@Test
 	public void setUserInfoMapperWhenNullThenThrowIllegalArgumentException() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> this.authenticationProvider.setUserInfoMapper(null))
-				.withMessage("userInfoMapper cannot be null");
+		assertThatIllegalArgumentException().isThrownBy(() -> this.authenticationProvider.setUserInfoMapper(null))
+			.withMessage("userInfoMapper cannot be null");
 	}
 
 	@Test
@@ -90,10 +90,10 @@ public class OidcUserInfoAuthenticationProviderTests {
 				new UsernamePasswordAuthenticationToken(null, null));
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
 
 		verifyNoInteractions(this.authorizationService);
 	}
@@ -106,10 +106,10 @@ public class OidcUserInfoAuthenticationProviderTests {
 		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
 
 		verifyNoInteractions(this.authorizationService);
 	}
@@ -121,10 +121,10 @@ public class OidcUserInfoAuthenticationProviderTests {
 		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
 
 		verify(this.authorizationService).findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN));
 	}
@@ -133,19 +133,20 @@ public class OidcUserInfoAuthenticationProviderTests {
 	public void authenticateWhenAccessTokenNotActiveThenThrowOAuth2AuthenticationException() {
 		String tokenValue = "token";
 		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization().build();
-		authorization = OidcAuthenticationProviderUtils.invalidate(authorization,
-				authorization.getAccessToken().getToken());
-		when(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
-				.thenReturn(authorization);
+		authorization = OAuth2Authorization.from(authorization)
+			.invalidate(authorization.getAccessToken().getToken())
+			.build();
+		given(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
+			.willReturn(authorization);
 
 		JwtAuthenticationToken principal = createJwtAuthenticationToken(tokenValue);
 		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
 
 		verify(this.authorizationService).findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN));
 	}
@@ -153,17 +154,17 @@ public class OidcUserInfoAuthenticationProviderTests {
 	@Test
 	public void authenticateWhenAccessTokenNotAuthorizedThenThrowOAuth2AuthenticationException() {
 		String tokenValue = "token";
-		when(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
-				.thenReturn(TestOAuth2Authorizations.authorization().build());
+		given(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
+			.willReturn(TestOAuth2Authorizations.authorization().build());
 
 		JwtAuthenticationToken principal = createJwtAuthenticationToken(tokenValue);
 		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INSUFFICIENT_SCOPE);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INSUFFICIENT_SCOPE);
 
 		verify(this.authorizationService).findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN));
 	}
@@ -172,19 +173,19 @@ public class OidcUserInfoAuthenticationProviderTests {
 	public void authenticateWhenIdTokenNullThenThrowOAuth2AuthenticationException() {
 		String tokenValue = "token";
 		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization()
-				.token(createAuthorization(tokenValue).getAccessToken().getToken())
-				.build();
-		when(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
-				.thenReturn(authorization);
+			.token(createAuthorization(tokenValue).getAccessToken().getToken())
+			.build();
+		given(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
+			.willReturn(authorization);
 
 		JwtAuthenticationToken principal = createJwtAuthenticationToken(tokenValue);
 		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
 
 		verify(this.authorizationService).findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN));
 	}
@@ -192,13 +193,13 @@ public class OidcUserInfoAuthenticationProviderTests {
 	@Test
 	public void authenticateWhenValidAccessTokenThenReturnUserInfo() {
 		String tokenValue = "access-token";
-		when(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
-				.thenReturn(createAuthorization(tokenValue));
+		given(this.authorizationService.findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN)))
+			.willReturn(createAuthorization(tokenValue));
 
 		JwtAuthenticationToken principal = createJwtAuthenticationToken(tokenValue);
 		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
-		OidcUserInfoAuthenticationToken authenticationResult =
-				(OidcUserInfoAuthenticationToken) this.authenticationProvider.authenticate(authentication);
+		OidcUserInfoAuthenticationToken authenticationResult = (OidcUserInfoAuthenticationToken) this.authenticationProvider
+			.authenticate(authentication);
 
 		assertThat(authenticationResult.getPrincipal()).isEqualTo(principal);
 		assertThat(authenticationResult.getCredentials()).isEqualTo("");
@@ -225,7 +226,7 @@ public class OidcUserInfoAuthenticationProviderTests {
 		assertThat(userInfo.getPhoneNumber()).isEqualTo("+1 (604) 555-1234;ext=5678");
 		assertThat(userInfo.getPhoneNumberVerified()).isEqualTo(false);
 		assertThat(userInfo.getAddress().getFormatted())
-				.isEqualTo("Champ de Mars\n5 Av. Anatole France\n75007 Paris\nFrance");
+			.isEqualTo("Champ de Mars\n5 Av. Anatole France\n75007 Paris\nFrance");
 		assertThat(userInfo.getUpdatedAt()).isEqualTo(Instant.parse("1970-01-01T00:00:00Z"));
 
 		verify(this.authorizationService).findByToken(eq(tokenValue), eq(OAuth2TokenType.ACCESS_TOKEN));
@@ -233,16 +234,13 @@ public class OidcUserInfoAuthenticationProviderTests {
 
 	private static OAuth2Authorization createAuthorization(String tokenValue) {
 		Instant now = Instant.now();
-		Set<String> scopes = new HashSet<>(Arrays.asList(
-				OidcScopes.OPENID, OidcScopes.ADDRESS, OidcScopes.EMAIL, OidcScopes.PHONE, OidcScopes.PROFILE));
-		OAuth2AccessToken accessToken = new OAuth2AccessToken(
-				OAuth2AccessToken.TokenType.BEARER, tokenValue, now, now.plusSeconds(300), scopes);
+		Set<String> scopes = new HashSet<>(Arrays.asList(OidcScopes.OPENID, OidcScopes.ADDRESS, OidcScopes.EMAIL,
+				OidcScopes.PHONE, OidcScopes.PROFILE));
+		OAuth2AccessToken accessToken = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, tokenValue, now,
+				now.plusSeconds(300), scopes);
 		OidcIdToken idToken = new OidcIdToken("id-token", now, now.plusSeconds(900), createUserInfo().getClaims());
 
-		return TestOAuth2Authorizations.authorization()
-				.token(accessToken)
-				.token(idToken)
-				.build();
+		return TestOAuth2Authorizations.authorization().token(accessToken).token(idToken).build();
 	}
 
 	private static JwtAuthenticationToken createJwtAuthenticationToken(String tokenValue) {
@@ -278,7 +276,7 @@ public class OidcUserInfoAuthenticationProviderTests {
 				.zoneinfo("Europe/Paris")
 				.locale("en-US")
 				.phoneNumber("+1 (604) 555-1234;ext=5678")
-				.phoneNumberVerified("false")
+				.phoneNumberVerified(false)
 				.claim("address", Collections.singletonMap("formatted", "Champ de Mars\n5 Av. Anatole France\n75007 Paris\nFrance"))
 				.updatedAt("1970-01-01T00:00:00Z")
 				.build();
