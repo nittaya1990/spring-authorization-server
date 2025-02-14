@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package org.springframework.security.oauth2.server.authorization.oidc.authentication;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.oauth2.core.oidc.OidcClientRegistration;
+import org.springframework.security.oauth2.server.authorization.oidc.OidcClientRegistration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -29,36 +29,40 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Joe Grandja
  */
 public class OidcClientRegistrationAuthenticationTokenTests {
+
 	private TestingAuthenticationToken principal = new TestingAuthenticationToken("principal", "credentials");
+
 	private OidcClientRegistration clientRegistration = OidcClientRegistration.builder()
-			.redirectUri("https://client.example.com").build();
+		.redirectUri("https://client.example.com")
+		.build();
 
 	@Test
 	public void constructorWhenPrincipalNullThenThrowIllegalArgumentException() {
 		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(null, this.clientRegistration))
-				.withMessage("principal cannot be null");
+			.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(null, this.clientRegistration))
+			.withMessage("principal cannot be null");
 	}
 
 	@Test
 	public void constructorWhenClientRegistrationNullThenThrowIllegalArgumentException() {
 		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(this.principal, (OidcClientRegistration) null))
-				.withMessage("clientRegistration cannot be null");
+			.isThrownBy(
+					() -> new OidcClientRegistrationAuthenticationToken(this.principal, (OidcClientRegistration) null))
+			.withMessage("clientRegistration cannot be null");
 	}
 
 	@Test
 	public void constructorWhenClientIdNullThenThrowIllegalArgumentException() {
 		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(this.principal, (String) null))
-				.withMessage("clientId cannot be empty");
+			.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(this.principal, (String) null))
+			.withMessage("clientId cannot be empty");
 	}
 
 	@Test
 	public void constructorWhenClientIdEmptyThenThrowIllegalArgumentException() {
 		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(this.principal, ""))
-				.withMessage("clientId cannot be empty");
+			.isThrownBy(() -> new OidcClientRegistrationAuthenticationToken(this.principal, ""))
+			.withMessage("clientId cannot be empty");
 	}
 
 	@Test

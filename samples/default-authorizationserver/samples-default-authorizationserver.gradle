@@ -1,13 +1,33 @@
-apply plugin: 'io.spring.convention.spring-sample-boot'
+plugins {
+	id "org.springframework.boot" version "3.2.2"
+	id "io.spring.dependency-management" version "1.1.0"
+	id "java"
+}
+
+group = project.rootProject.group
+version = project.rootProject.version
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+	mavenCentral()
+	maven { url "https://repo.spring.io/milestone" }
+	maven { url "https://repo.spring.io/snapshot" }
+}
 
 dependencies {
-	compile 'org.springframework.boot:spring-boot-starter-web'
-	compile 'org.springframework.boot:spring-boot-starter-security'
-	compile 'org.springframework.boot:spring-boot-starter-jdbc'
-	compile project(':spring-security-oauth2-authorization-server')
-	runtimeOnly 'com.h2database:h2'
+	implementation "org.springframework.boot:spring-boot-starter-web"
+	implementation "org.springframework.boot:spring-boot-starter-security"
+	implementation project(":spring-security-oauth2-authorization-server")
 
-	testCompile 'org.springframework.boot:spring-boot-starter-test'
-	testCompile 'org.springframework.security:spring-security-test'
-	testCompile 'net.sourceforge.htmlunit:htmlunit'
+	testImplementation "org.springframework.boot:spring-boot-starter-test"
+	testImplementation "org.springframework.security:spring-security-test"
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testImplementation "net.sourceforge.htmlunit:htmlunit"
+}
+
+tasks.named("test") {
+	useJUnitPlatform()
 }

@@ -17,11 +17,10 @@ package org.springframework.security.oauth2.server.authorization.token;
 
 import java.time.Instant;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
-import org.springframework.security.oauth2.core.OAuth2TokenType;
-import org.springframework.security.oauth2.server.authorization.OAuth2TokenContext;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.TestRegisteredClients;
 
@@ -33,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Joe Grandja
  */
 public class OAuth2RefreshTokenGeneratorTests {
+
 	private final OAuth2RefreshTokenGenerator tokenGenerator = new OAuth2RefreshTokenGenerator();
 
 	@Test
@@ -61,7 +61,8 @@ public class OAuth2RefreshTokenGeneratorTests {
 		assertThat(refreshToken).isNotNull();
 
 		Instant issuedAt = Instant.now();
-		Instant expiresAt = issuedAt.plus(tokenContext.getRegisteredClient().getTokenSettings().getRefreshTokenTimeToLive());
+		Instant expiresAt = issuedAt
+			.plus(tokenContext.getRegisteredClient().getTokenSettings().getRefreshTokenTimeToLive());
 		assertThat(refreshToken.getIssuedAt()).isBetween(issuedAt.minusSeconds(1), issuedAt.plusSeconds(1));
 		assertThat(refreshToken.getExpiresAt()).isBetween(expiresAt.minusSeconds(1), expiresAt.plusSeconds(1));
 	}

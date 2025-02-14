@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
  */
 package org.springframework.security.oauth2.server.authorization.authentication;
 
+import java.util.Collections;
+import java.util.Map;
+
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
-import org.springframework.security.oauth2.core.Version;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
+import org.springframework.security.oauth2.server.authorization.util.SpringAuthorizationServerVersion;
 import org.springframework.util.Assert;
 
-import java.util.Collections;
-import java.util.Map;
-
 /**
- * An {@link Authentication} implementation used when issuing an
- * OAuth 2.0 Access Token and (optional) Refresh Token.
+ * An {@link Authentication} implementation used when issuing an OAuth 2.0 Access Token
+ * and (optional) Refresh Token.
  *
  * @author Joe Grandja
  * @author Madhu Bhat
@@ -41,28 +41,34 @@ import java.util.Map;
  * @see OAuth2ClientAuthenticationToken
  */
 public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthenticationToken {
-	private static final long serialVersionUID = Version.SERIAL_VERSION_UID;
+
+	private static final long serialVersionUID = SpringAuthorizationServerVersion.SERIAL_VERSION_UID;
+
 	private final RegisteredClient registeredClient;
+
 	private final Authentication clientPrincipal;
+
 	private final OAuth2AccessToken accessToken;
+
 	private final OAuth2RefreshToken refreshToken;
+
 	private final Map<String, Object> additionalParameters;
 
 	/**
-	 * Constructs an {@code OAuth2AccessTokenAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OAuth2AccessTokenAuthenticationToken} using the provided
+	 * parameters.
 	 * @param registeredClient the registered client
 	 * @param clientPrincipal the authenticated client principal
 	 * @param accessToken the access token
 	 */
-	public OAuth2AccessTokenAuthenticationToken(RegisteredClient registeredClient,
-			Authentication clientPrincipal, OAuth2AccessToken accessToken) {
+	public OAuth2AccessTokenAuthenticationToken(RegisteredClient registeredClient, Authentication clientPrincipal,
+			OAuth2AccessToken accessToken) {
 		this(registeredClient, clientPrincipal, accessToken, null);
 	}
 
 	/**
-	 * Constructs an {@code OAuth2AccessTokenAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OAuth2AccessTokenAuthenticationToken} using the provided
+	 * parameters.
 	 * @param registeredClient the registered client
 	 * @param clientPrincipal the authenticated client principal
 	 * @param accessToken the access token
@@ -74,8 +80,8 @@ public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthentication
 	}
 
 	/**
-	 * Constructs an {@code OAuth2AccessTokenAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OAuth2AccessTokenAuthenticationToken} using the provided
+	 * parameters.
 	 * @param registeredClient the registered client
 	 * @param clientPrincipal the authenticated client principal
 	 * @param accessToken the access token
@@ -83,7 +89,8 @@ public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthentication
 	 * @param additionalParameters the additional parameters
 	 */
 	public OAuth2AccessTokenAuthenticationToken(RegisteredClient registeredClient, Authentication clientPrincipal,
-			OAuth2AccessToken accessToken, @Nullable OAuth2RefreshToken refreshToken, Map<String, Object> additionalParameters) {
+			OAuth2AccessToken accessToken, @Nullable OAuth2RefreshToken refreshToken,
+			Map<String, Object> additionalParameters) {
 		super(Collections.emptyList());
 		Assert.notNull(registeredClient, "registeredClient cannot be null");
 		Assert.notNull(clientPrincipal, "clientPrincipal cannot be null");
@@ -108,7 +115,6 @@ public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthentication
 
 	/**
 	 * Returns the {@link RegisteredClient registered client}.
-	 *
 	 * @return the {@link RegisteredClient}
 	 */
 	public RegisteredClient getRegisteredClient() {
@@ -117,7 +123,6 @@ public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthentication
 
 	/**
 	 * Returns the {@link OAuth2AccessToken access token}.
-	 *
 	 * @return the {@link OAuth2AccessToken}
 	 */
 	public OAuth2AccessToken getAccessToken() {
@@ -126,7 +131,6 @@ public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthentication
 
 	/**
 	 * Returns the {@link OAuth2RefreshToken refresh token}.
-	 *
 	 * @return the {@link OAuth2RefreshToken} or {@code null} if not available
 	 */
 	@Nullable
@@ -136,10 +140,10 @@ public class OAuth2AccessTokenAuthenticationToken extends AbstractAuthentication
 
 	/**
 	 * Returns the additional parameters.
-	 *
 	 * @return a {@code Map} of the additional parameters, may be empty
 	 */
 	public Map<String, Object> getAdditionalParameters() {
 		return this.additionalParameters;
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package org.springframework.security.oauth2.server.authorization.authentication;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -27,8 +27,8 @@ import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.TestOAuth2Authorizations;
-import org.springframework.security.oauth2.core.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.TestRegisteredClients;
 
@@ -37,10 +37,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link OAuth2TokenRevocationAuthenticationProvider}.
@@ -49,10 +49,12 @@ import static org.mockito.Mockito.when;
  * @author Joe Grandja
  */
 public class OAuth2TokenRevocationAuthenticationProviderTests {
+
 	private OAuth2AuthorizationService authorizationService;
+
 	private OAuth2TokenRevocationAuthenticationProvider authenticationProvider;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		this.authorizationService = mock(OAuth2AuthorizationService.class);
 		this.authenticationProvider = new OAuth2TokenRevocationAuthenticationProvider(this.authorizationService);
@@ -61,8 +63,8 @@ public class OAuth2TokenRevocationAuthenticationProviderTests {
 	@Test
 	public void constructorWhenAuthorizationServiceNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> new OAuth2TokenRevocationAuthenticationProvider(null))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("authorizationService cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("authorizationService cannot be null");
 	}
 
 	@Test
@@ -73,40 +75,41 @@ public class OAuth2TokenRevocationAuthenticationProviderTests {
 	@Test
 	public void authenticateWhenClientPrincipalNotOAuth2ClientAuthenticationTokenThenThrowOAuth2AuthenticationException() {
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
-		TestingAuthenticationToken clientPrincipal = new TestingAuthenticationToken(
-				registeredClient.getClientId(), registeredClient.getClientSecret());
-		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken(
-				"token", clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
+		TestingAuthenticationToken clientPrincipal = new TestingAuthenticationToken(registeredClient.getClientId(),
+				registeredClient.getClientSecret());
+		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken("token",
+				clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_CLIENT);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_CLIENT);
 	}
 
 	@Test
 	public void authenticateWhenClientPrincipalNotAuthenticatedThenThrowOAuth2AuthenticationException() {
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
 		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-				registeredClient.getClientId(), ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret(), null);
-		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken(
-				"token", clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
+				registeredClient.getClientId(), ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+				registeredClient.getClientSecret(), null);
+		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken("token",
+				clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_CLIENT);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_CLIENT);
 	}
 
 	@Test
 	public void authenticateWhenInvalidTokenThenNotRevoked() {
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
-		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-				registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
-		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken(
-				"token", clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
-		OAuth2TokenRevocationAuthenticationToken authenticationResult =
-				(OAuth2TokenRevocationAuthenticationToken) this.authenticationProvider.authenticate(authentication);
+		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(registeredClient,
+				ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
+		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken("token",
+				clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
+		OAuth2TokenRevocationAuthenticationToken authenticationResult = (OAuth2TokenRevocationAuthenticationToken) this.authenticationProvider
+			.authenticate(authentication);
 		assertThat(authenticationResult.isAuthenticated()).isFalse();
 		verify(this.authorizationService, never()).save(any());
 	}
@@ -114,42 +117,39 @@ public class OAuth2TokenRevocationAuthenticationProviderTests {
 	@Test
 	public void authenticateWhenTokenIssuedToAnotherClientThenThrowOAuth2AuthenticationException() {
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
-		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization(
-				TestRegisteredClients.registeredClient2().build()).build();
-		when(this.authorizationService.findByToken(
-				eq("token"),
-				isNull()))
-				.thenReturn(authorization);
+		OAuth2Authorization authorization = TestOAuth2Authorizations
+			.authorization(TestRegisteredClients.registeredClient2().build())
+			.build();
+		given(this.authorizationService.findByToken(eq("token"), isNull())).willReturn(authorization);
 
-		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-				registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
-		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken(
-				"token", clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
+		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(registeredClient,
+				ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
+		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken("token",
+				clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
 
 		assertThatThrownBy(() -> this.authenticationProvider.authenticate(authentication))
-				.isInstanceOf(OAuth2AuthenticationException.class)
-				.extracting(ex -> ((OAuth2AuthenticationException) ex).getError())
-				.extracting("errorCode")
-				.isEqualTo(OAuth2ErrorCodes.INVALID_CLIENT);
+			.isInstanceOf(OAuth2AuthenticationException.class)
+			.extracting((ex) -> ((OAuth2AuthenticationException) ex).getError())
+			.extracting("errorCode")
+			.isEqualTo(OAuth2ErrorCodes.INVALID_CLIENT);
 	}
 
 	@Test
 	public void authenticateWhenValidRefreshTokenThenRevoked() {
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
-		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization(
-				registeredClient).build();
-		when(this.authorizationService.findByToken(
-				eq(authorization.getRefreshToken().getToken().getTokenValue()),
+		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization(registeredClient).build();
+		given(this.authorizationService.findByToken(eq(authorization.getRefreshToken().getToken().getTokenValue()),
 				isNull()))
-				.thenReturn(authorization);
+			.willReturn(authorization);
 
-		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-				registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
+		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(registeredClient,
+				ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
 		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken(
-				authorization.getRefreshToken().getToken().getTokenValue(), clientPrincipal, OAuth2TokenType.REFRESH_TOKEN.getValue());
+				authorization.getRefreshToken().getToken().getTokenValue(), clientPrincipal,
+				OAuth2TokenType.REFRESH_TOKEN.getValue());
 
-		OAuth2TokenRevocationAuthenticationToken authenticationResult =
-				(OAuth2TokenRevocationAuthenticationToken) this.authenticationProvider.authenticate(authentication);
+		OAuth2TokenRevocationAuthenticationToken authenticationResult = (OAuth2TokenRevocationAuthenticationToken) this.authenticationProvider
+			.authenticate(authentication);
 		assertThat(authenticationResult.isAuthenticated()).isTrue();
 
 		ArgumentCaptor<OAuth2Authorization> authorizationCaptor = ArgumentCaptor.forClass(OAuth2Authorization.class);
@@ -165,20 +165,19 @@ public class OAuth2TokenRevocationAuthenticationProviderTests {
 	@Test
 	public void authenticateWhenValidAccessTokenThenRevoked() {
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
-		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization(
-				registeredClient).build();
-		when(this.authorizationService.findByToken(
-				eq(authorization.getAccessToken().getToken().getTokenValue()),
+		OAuth2Authorization authorization = TestOAuth2Authorizations.authorization(registeredClient).build();
+		given(this.authorizationService.findByToken(eq(authorization.getAccessToken().getToken().getTokenValue()),
 				isNull()))
-				.thenReturn(authorization);
+			.willReturn(authorization);
 
-		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
-				registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
+		OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(registeredClient,
+				ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret());
 		OAuth2TokenRevocationAuthenticationToken authentication = new OAuth2TokenRevocationAuthenticationToken(
-				authorization.getAccessToken().getToken().getTokenValue(), clientPrincipal, OAuth2TokenType.ACCESS_TOKEN.getValue());
+				authorization.getAccessToken().getToken().getTokenValue(), clientPrincipal,
+				OAuth2TokenType.ACCESS_TOKEN.getValue());
 
-		OAuth2TokenRevocationAuthenticationToken authenticationResult =
-				(OAuth2TokenRevocationAuthenticationToken) this.authenticationProvider.authenticate(authentication);
+		OAuth2TokenRevocationAuthenticationToken authenticationResult = (OAuth2TokenRevocationAuthenticationToken) this.authenticationProvider
+			.authenticate(authentication);
 		assertThat(authenticationResult.isAuthenticated()).isTrue();
 
 		ArgumentCaptor<OAuth2Authorization> authorizationCaptor = ArgumentCaptor.forClass(OAuth2Authorization.class);
@@ -190,4 +189,5 @@ public class OAuth2TokenRevocationAuthenticationProviderTests {
 		OAuth2Authorization.Token<OAuth2RefreshToken> refreshToken = updatedAuthorization.getRefreshToken();
 		assertThat(refreshToken.isInvalidated()).isFalse();
 	}
+
 }

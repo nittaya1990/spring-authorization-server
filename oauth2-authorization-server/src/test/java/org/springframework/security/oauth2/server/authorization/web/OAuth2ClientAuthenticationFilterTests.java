@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,15 @@
  */
 package org.springframework.security.oauth2.server.authorization.web;
 
-import javax.servlet.FilterChain;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.assertj.core.api.InstanceOfAssertFactories;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.springframework.http.HttpMethod;
@@ -33,6 +35,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.codec.Hex;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -48,12 +51,11 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link OAuth2ClientAuthenticationFilter}.
@@ -62,15 +64,20 @@ import static org.mockito.Mockito.when;
  * @author Joe Grandja
  */
 public class OAuth2ClientAuthenticationFilterTests {
-	private String filterProcessesUrl = "/oauth2/token";
-	private AuthenticationManager authenticationManager;
-	private RequestMatcher requestMatcher;
-	private AuthenticationConverter authenticationConverter;
-	private OAuth2ClientAuthenticationFilter filter;
-	private final HttpMessageConverter<OAuth2Error> errorHttpResponseConverter =
-			new OAuth2ErrorHttpMessageConverter();
 
-	@Before
+	private String filterProcessesUrl = "/oauth2/token";
+
+	private AuthenticationManager authenticationManager;
+
+	private RequestMatcher requestMatcher;
+
+	private AuthenticationConverter authenticationConverter;
+
+	private OAuth2ClientAuthenticationFilter filter;
+
+	private final HttpMessageConverter<OAuth2Error> errorHttpResponseConverter = new OAuth2ErrorHttpMessageConverter();
+
+	@BeforeEach
 	public void setUp() {
 		this.authenticationManager = mock(AuthenticationManager.class);
 		this.requestMatcher = new AntPathRequestMatcher(this.filterProcessesUrl, HttpMethod.POST.name());
@@ -79,7 +86,7 @@ public class OAuth2ClientAuthenticationFilterTests {
 		this.filter.setAuthenticationConverter(this.authenticationConverter);
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() {
 		SecurityContextHolder.clearContext();
 	}
@@ -87,36 +94,36 @@ public class OAuth2ClientAuthenticationFilterTests {
 	@Test
 	public void constructorWhenAuthenticationManagerNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> new OAuth2ClientAuthenticationFilter(null, this.requestMatcher))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("authenticationManager cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("authenticationManager cannot be null");
 	}
 
 	@Test
 	public void constructorWhenRequestMatcherNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> new OAuth2ClientAuthenticationFilter(this.authenticationManager, null))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("requestMatcher cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("requestMatcher cannot be null");
 	}
 
 	@Test
 	public void setAuthenticationConverterWhenNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> this.filter.setAuthenticationConverter(null))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("authenticationConverter cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("authenticationConverter cannot be null");
 	}
 
 	@Test
 	public void setAuthenticationSuccessHandlerWhenNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> this.filter.setAuthenticationSuccessHandler(null))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("authenticationSuccessHandler cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("authenticationSuccessHandler cannot be null");
 	}
 
 	@Test
 	public void setAuthenticationFailureHandlerWhenNullThenThrowIllegalArgumentException() {
 		assertThatThrownBy(() -> this.filter.setAuthenticationFailureHandler(null))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("authenticationFailureHandler cannot be null");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("authenticationFailureHandler cannot be null");
 	}
 
 	@Test
@@ -130,6 +137,7 @@ public class OAuth2ClientAuthenticationFilterTests {
 		this.filter.doFilter(request, response, filterChain);
 
 		verify(filterChain).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
+		verifyNoInteractions(this.authenticationConverter);
 	}
 
 	@Test
@@ -142,12 +150,13 @@ public class OAuth2ClientAuthenticationFilterTests {
 		this.filter.doFilter(request, response, filterChain);
 
 		verify(filterChain).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
+		verifyNoInteractions(this.authenticationManager);
 	}
 
 	@Test
 	public void doFilterWhenRequestMatchesAndInvalidCredentialsThenInvalidRequestError() throws Exception {
-		when(this.authenticationConverter.convert(any(HttpServletRequest.class))).thenThrow(
-				new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_REQUEST));
+		given(this.authenticationConverter.convert(any(HttpServletRequest.class)))
+			.willThrow(new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_REQUEST));
 
 		MockHttpServletRequest request = new MockHttpServletRequest("POST", this.filterProcessesUrl);
 		request.setServletPath(this.filterProcessesUrl);
@@ -164,12 +173,31 @@ public class OAuth2ClientAuthenticationFilterTests {
 		assertThat(error.getErrorCode()).isEqualTo(OAuth2ErrorCodes.INVALID_REQUEST);
 	}
 
+	// gh-889
 	@Test
-	public void doFilterWhenRequestMatchesAndBadCredentialsThenInvalidClientError() throws Exception {
-		when(this.authenticationConverter.convert(any(HttpServletRequest.class))).thenReturn(
-				new OAuth2ClientAuthenticationToken("clientId", ClientAuthenticationMethod.CLIENT_SECRET_BASIC, "invalid-secret", null));
-		when(this.authenticationManager.authenticate(any(Authentication.class))).thenThrow(
-				new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_CLIENT));
+	public void doFilterWhenRequestMatchesAndClientIdContainsNonPrintableASCIIThenInvalidRequestError()
+			throws Exception {
+		// Hex 00 -> null
+		String clientId = new String(Hex.decode("00"), StandardCharsets.UTF_8);
+		assertWhenInvalidClientIdThenInvalidRequestError(clientId);
+
+		// Hex 0a61 -> line feed + a
+		clientId = new String(Hex.decode("0a61"), StandardCharsets.UTF_8);
+		assertWhenInvalidClientIdThenInvalidRequestError(clientId);
+
+		// Hex 1b -> escape
+		clientId = new String(Hex.decode("1b"), StandardCharsets.UTF_8);
+		assertWhenInvalidClientIdThenInvalidRequestError(clientId);
+
+		// Hex 1b61 -> escape + a
+		clientId = new String(Hex.decode("1b61"), StandardCharsets.UTF_8);
+		assertWhenInvalidClientIdThenInvalidRequestError(clientId);
+	}
+
+	private void assertWhenInvalidClientIdThenInvalidRequestError(String clientId) throws Exception {
+		given(this.authenticationConverter.convert(any(HttpServletRequest.class)))
+			.willReturn(new OAuth2ClientAuthenticationToken(clientId, ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+					"secret", null));
 
 		MockHttpServletRequest request = new MockHttpServletRequest("POST", this.filterProcessesUrl);
 		request.setServletPath(this.filterProcessesUrl);
@@ -179,6 +207,31 @@ public class OAuth2ClientAuthenticationFilterTests {
 		this.filter.doFilter(request, response, filterChain);
 
 		verifyNoInteractions(filterChain);
+		verifyNoInteractions(this.authenticationManager);
+
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+		assertThat(response.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+		OAuth2Error error = readError(response);
+		assertThat(error.getErrorCode()).isEqualTo(OAuth2ErrorCodes.INVALID_REQUEST);
+	}
+
+	@Test
+	public void doFilterWhenRequestMatchesAndBadCredentialsThenInvalidClientError() throws Exception {
+		given(this.authenticationConverter.convert(any(HttpServletRequest.class)))
+			.willReturn(new OAuth2ClientAuthenticationToken("clientId", ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+					"invalid-secret", null));
+		given(this.authenticationManager.authenticate(any(Authentication.class)))
+			.willThrow(new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_CLIENT));
+
+		MockHttpServletRequest request = new MockHttpServletRequest("POST", this.filterProcessesUrl);
+		request.setServletPath(this.filterProcessesUrl);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		FilterChain filterChain = mock(FilterChain.class);
+
+		this.filter.doFilter(request, response, filterChain);
+
+		verifyNoInteractions(filterChain);
+		verify(this.authenticationManager).authenticate(any());
 
 		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 		assertThat(response.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED.value());
@@ -191,10 +244,12 @@ public class OAuth2ClientAuthenticationFilterTests {
 		final String remoteAddress = "remote-address";
 
 		RegisteredClient registeredClient = TestRegisteredClients.registeredClient().build();
-		when(this.authenticationConverter.convert(any(HttpServletRequest.class))).thenReturn(
-				new OAuth2ClientAuthenticationToken(registeredClient.getClientId(), ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret(), null));
-		when(this.authenticationManager.authenticate(any(Authentication.class))).thenReturn(
-				new OAuth2ClientAuthenticationToken(registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret()));
+		given(this.authenticationConverter.convert(any(HttpServletRequest.class)))
+			.willReturn(new OAuth2ClientAuthenticationToken(registeredClient.getClientId(),
+					ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret(), null));
+		given(this.authenticationManager.authenticate(any(Authentication.class)))
+			.willReturn(new OAuth2ClientAuthenticationToken(registeredClient,
+					ClientAuthenticationMethod.CLIENT_SECRET_BASIC, registeredClient.getClientSecret()));
 
 		MockHttpServletRequest request = new MockHttpServletRequest("POST", this.filterProcessesUrl);
 		request.setServletPath(this.filterProcessesUrl);
@@ -208,22 +263,23 @@ public class OAuth2ClientAuthenticationFilterTests {
 
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		assertThat(authentication).isInstanceOf(OAuth2ClientAuthenticationToken.class);
-		assertThat(((OAuth2ClientAuthenticationToken) authentication).getRegisteredClient()).isEqualTo(registeredClient);
+		assertThat(((OAuth2ClientAuthenticationToken) authentication).getRegisteredClient())
+			.isEqualTo(registeredClient);
 
-		ArgumentCaptor<OAuth2ClientAuthenticationToken> authenticationRequestCaptor =
-				ArgumentCaptor.forClass(OAuth2ClientAuthenticationToken.class);
+		ArgumentCaptor<OAuth2ClientAuthenticationToken> authenticationRequestCaptor = ArgumentCaptor
+			.forClass(OAuth2ClientAuthenticationToken.class);
 		verify(this.authenticationManager).authenticate(authenticationRequestCaptor.capture());
-		assertThat(authenticationRequestCaptor)
-				.extracting(ArgumentCaptor::getValue)
-				.extracting(OAuth2ClientAuthenticationToken::getDetails)
-				.asInstanceOf(type(WebAuthenticationDetails.class))
-				.extracting(WebAuthenticationDetails::getRemoteAddress)
-				.isEqualTo(remoteAddress);
+		assertThat(authenticationRequestCaptor).extracting(ArgumentCaptor::getValue)
+			.extracting(OAuth2ClientAuthenticationToken::getDetails)
+			.asInstanceOf(InstanceOfAssertFactories.type(WebAuthenticationDetails.class))
+			.extracting(WebAuthenticationDetails::getRemoteAddress)
+			.isEqualTo(remoteAddress);
 	}
 
 	private OAuth2Error readError(MockHttpServletResponse response) throws Exception {
-		MockClientHttpResponse httpResponse = new MockClientHttpResponse(
-				response.getContentAsByteArray(), HttpStatus.valueOf(response.getStatus()));
+		MockClientHttpResponse httpResponse = new MockClientHttpResponse(response.getContentAsByteArray(),
+				HttpStatus.valueOf(response.getStatus()));
 		return this.errorHttpResponseConverter.read(OAuth2Error.class, httpResponse);
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@ package org.springframework.security.oauth2.server.authorization.web;
 import java.io.IOException;
 import java.io.Writer;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -42,17 +41,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * @author Joe Grandja
  * @since 0.0.1
  * @see com.nimbusds.jose.jwk.source.JWKSource
- * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7517">JSON Web Key (JWK)</a>
- * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7517#section-5">Section 5 JWK Set Format</a>
+ * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7517">JSON Web Key
+ * (JWK)</a>
+ * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7517#section-5">Section 5
+ * JWK Set Format</a>
  */
 public final class NimbusJwkSetEndpointFilter extends OncePerRequestFilter {
+
 	/**
 	 * The default endpoint {@code URI} for JWK Set requests.
 	 */
 	private static final String DEFAULT_JWK_SET_ENDPOINT_URI = "/oauth2/jwks";
 
 	private final JWKSource<SecurityContext> jwkSource;
+
 	private final JWKSelector jwkSelector;
+
 	private final RequestMatcher requestMatcher;
 
 	/**
@@ -65,7 +69,6 @@ public final class NimbusJwkSetEndpointFilter extends OncePerRequestFilter {
 
 	/**
 	 * Constructs a {@code NimbusJwkSetEndpointFilter} using the provided parameters.
-	 *
 	 * @param jwkSource the {@code com.nimbusds.jose.jwk.source.JWKSource}
 	 * @param jwkSetEndpointUri the endpoint {@code URI} for JWK Set requests
 	 */
@@ -96,7 +99,8 @@ public final class NimbusJwkSetEndpointFilter extends OncePerRequestFilter {
 
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		try (Writer writer = response.getWriter()) {
-			writer.write(jwkSet.toString());	// toString() excludes private keys
+			writer.write(jwkSet.toString()); // toString() excludes private keys
 		}
 	}
+
 }

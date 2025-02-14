@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import java.util.Collections;
 
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.Version;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.server.authorization.util.SpringAuthorizationServerVersion;
 import org.springframework.util.Assert;
 
 /**
@@ -33,13 +33,16 @@ import org.springframework.util.Assert;
  * @see OidcUserInfoAuthenticationProvider
  */
 public class OidcUserInfoAuthenticationToken extends AbstractAuthenticationToken {
-	private static final long serialVersionUID = Version.SERIAL_VERSION_UID;
+
+	private static final long serialVersionUID = SpringAuthorizationServerVersion.SERIAL_VERSION_UID;
+
 	private final Authentication principal;
+
 	private final OidcUserInfo userInfo;
 
 	/**
-	 * Constructs an {@code OidcUserInfoAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OidcUserInfoAuthenticationToken} using the provided
+	 * parameters.
 	 * @param principal the principal
 	 */
 	public OidcUserInfoAuthenticationToken(Authentication principal) {
@@ -51,8 +54,8 @@ public class OidcUserInfoAuthenticationToken extends AbstractAuthenticationToken
 	}
 
 	/**
-	 * Constructs an {@code OidcUserInfoAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OidcUserInfoAuthenticationToken} using the provided
+	 * parameters.
 	 * @param principal the authenticated principal
 	 * @param userInfo the UserInfo claims
 	 */
@@ -77,7 +80,6 @@ public class OidcUserInfoAuthenticationToken extends AbstractAuthenticationToken
 
 	/**
 	 * Returns the UserInfo claims.
-	 *
 	 * @return the UserInfo claims
 	 */
 	public OidcUserInfo getUserInfo() {

@@ -15,6 +15,9 @@
  */
 package org.springframework.security.oauth2.server.authorization.authentication;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -30,8 +33,9 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.util.Assert;
 
 /**
- * An {@link AuthenticationProvider} implementation used for OAuth 2.0 Public Client Authentication,
- * which authenticates the {@link PkceParameterNames#CODE_VERIFIER code_verifier} parameter.
+ * An {@link AuthenticationProvider} implementation used for OAuth 2.0 Public Client
+ * Authentication, which authenticates the {@link PkceParameterNames#CODE_VERIFIER
+ * code_verifier} parameter.
  *
  * @author Joe Grandja
  * @since 0.2.3
@@ -41,13 +45,18 @@ import org.springframework.util.Assert;
  * @see OAuth2AuthorizationService
  */
 public final class PublicClientAuthenticationProvider implements AuthenticationProvider {
+
 	private static final String ERROR_URI = "https://datatracker.ietf.org/doc/html/rfc6749#section-3.2.1";
+
+	private final Log logger = LogFactory.getLog(getClass());
+
 	private final RegisteredClientRepository registeredClientRepository;
+
 	private final CodeVerifierAuthenticator codeVerifierAuthenticator;
 
 	/**
-	 * Constructs a {@code PublicClientAuthenticationProvider} using the provided parameters.
-	 *
+	 * Constructs a {@code PublicClientAuthenticationProvider} using the provided
+	 * parameters.
 	 * @param registeredClientRepository the repository of registered clients
 	 * @param authorizationService the authorization service
 	 */
@@ -61,8 +70,7 @@ public final class PublicClientAuthenticationProvider implements AuthenticationP
 
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-		OAuth2ClientAuthenticationToken clientAuthentication =
-				(OAuth2ClientAuthenticationToken) authentication;
+		OAuth2ClientAuthenticationToken clientAuthentication = (OAuth2ClientAuthenticationToken) authentication;
 
 		if (!ClientAuthenticationMethod.NONE.equals(clientAuthentication.getClientAuthenticationMethod())) {
 			return null;
@@ -74,13 +82,25 @@ public final class PublicClientAuthenticationProvider implements AuthenticationP
 			throwInvalidClient(OAuth2ParameterNames.CLIENT_ID);
 		}
 
-		if (!registeredClient.getClientAuthenticationMethods().contains(
-				clientAuthentication.getClientAuthenticationMethod())) {
+		if (this.logger.isTraceEnabled()) {
+			this.logger.trace("Retrieved registered client");
+		}
+
+		if (!registeredClient.getClientAuthenticationMethods()
+			.contains(clientAuthentication.getClientAuthenticationMethod())) {
 			throwInvalidClient("authentication_method");
+		}
+
+		if (this.logger.isTraceEnabled()) {
+			this.logger.trace("Validated client authentication parameters");
 		}
 
 		// Validate the "code_verifier" parameter for the public client
 		this.codeVerifierAuthenticator.authenticateRequired(clientAuthentication, registeredClient);
+
+		if (this.logger.isTraceEnabled()) {
+			this.logger.trace("Authenticated public client");
+		}
 
 		return new OAuth2ClientAuthenticationToken(registeredClient,
 				clientAuthentication.getClientAuthenticationMethod(), null);
@@ -92,11 +112,8 @@ public final class PublicClientAuthenticationProvider implements AuthenticationP
 	}
 
 	private static void throwInvalidClient(String parameterName) {
-		OAuth2Error error = new OAuth2Error(
-				OAuth2ErrorCodes.INVALID_CLIENT,
-				"Client authentication failed: " + parameterName,
-				ERROR_URI
-		);
+		OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT,
+				"Client authentication failed: " + parameterName, ERROR_URI);
 		throw new OAuth2AuthenticationException(error);
 	}
 

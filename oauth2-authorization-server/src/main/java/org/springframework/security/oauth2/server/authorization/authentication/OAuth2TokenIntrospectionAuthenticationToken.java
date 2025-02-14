@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import java.util.Map;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.OAuth2TokenIntrospection;
-import org.springframework.security.oauth2.core.Version;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenIntrospection;
+import org.springframework.security.oauth2.server.authorization.util.SpringAuthorizationServerVersion;
 import org.springframework.util.Assert;
 
 /**
@@ -37,16 +37,22 @@ import org.springframework.util.Assert;
  * @see OAuth2TokenIntrospectionAuthenticationProvider
  */
 public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthenticationToken {
-	private static final long serialVersionUID = Version.SERIAL_VERSION_UID;
+
+	private static final long serialVersionUID = SpringAuthorizationServerVersion.SERIAL_VERSION_UID;
+
 	private final String token;
+
 	private final Authentication clientPrincipal;
+
 	private final String tokenTypeHint;
+
 	private final Map<String, Object> additionalParameters;
+
 	private final OAuth2TokenIntrospection tokenClaims;
 
 	/**
-	 * Constructs an {@code OAuth2TokenIntrospectionAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OAuth2TokenIntrospectionAuthenticationToken} using the
+	 * provided parameters.
 	 * @param token the token
 	 * @param clientPrincipal the authenticated client principal
 	 * @param tokenTypeHint the token type hint
@@ -61,13 +67,13 @@ public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthent
 		this.clientPrincipal = clientPrincipal;
 		this.tokenTypeHint = tokenTypeHint;
 		this.additionalParameters = Collections.unmodifiableMap(
-				additionalParameters != null ? new HashMap<>(additionalParameters) : Collections.emptyMap());
+				(additionalParameters != null) ? new HashMap<>(additionalParameters) : Collections.emptyMap());
 		this.tokenClaims = OAuth2TokenIntrospection.builder().build();
 	}
 
 	/**
-	 * Constructs an {@code OAuth2TokenIntrospectionAuthenticationToken} using the provided parameters.
-	 *
+	 * Constructs an {@code OAuth2TokenIntrospectionAuthenticationToken} using the
+	 * provided parameters.
 	 * @param token the token
 	 * @param clientPrincipal the authenticated client principal
 	 * @param tokenClaims the token claims
@@ -83,7 +89,8 @@ public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthent
 		this.tokenTypeHint = null;
 		this.additionalParameters = Collections.emptyMap();
 		this.tokenClaims = tokenClaims;
-		// Indicates that the request was authenticated, even though the token might not be active
+		// Indicates that the request was authenticated, even though the token might not
+		// be active
 		setAuthenticated(true);
 	}
 
@@ -99,7 +106,6 @@ public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthent
 
 	/**
 	 * Returns the token.
-	 *
 	 * @return the token
 	 */
 	public String getToken() {
@@ -108,7 +114,6 @@ public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthent
 
 	/**
 	 * Returns the token type hint.
-	 *
 	 * @return the token type hint
 	 */
 	@Nullable
@@ -118,7 +123,6 @@ public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthent
 
 	/**
 	 * Returns the additional parameters.
-	 *
 	 * @return the additional parameters
 	 */
 	public Map<String, Object> getAdditionalParameters() {
@@ -127,7 +131,6 @@ public class OAuth2TokenIntrospectionAuthenticationToken extends AbstractAuthent
 
 	/**
 	 * Returns the token claims.
-	 *
 	 * @return the {@link OAuth2TokenIntrospection}
 	 */
 	public OAuth2TokenIntrospection getTokenClaims() {

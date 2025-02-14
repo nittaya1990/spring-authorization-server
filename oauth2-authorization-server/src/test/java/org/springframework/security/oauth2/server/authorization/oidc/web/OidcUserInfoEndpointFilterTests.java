@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,9 @@ package org.springframework.security.oauth2.server.authorization.oidc.web;
 import java.time.Instant;
 import java.util.Collections;
 
-import javax.servlet.FilterChain;
-
-import org.junit.Before;
-import org.junit.Test;
+import jakarta.servlet.FilterChain;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,14 +43,17 @@ import org.springframework.security.oauth2.jwt.JoseHeaderNames;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.authorization.oidc.authentication.OidcUserInfoAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.web.authentication.AuthenticationConverter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link OidcUserInfoEndpointFilter}.
@@ -59,12 +61,16 @@ import static org.mockito.Mockito.when;
  * @author Steve Riesenberg
  */
 public class OidcUserInfoEndpointFilterTests {
+
 	private static final String DEFAULT_OIDC_USER_INFO_ENDPOINT_URI = "/userinfo";
+
 	private AuthenticationManager authenticationManager;
+
 	private OidcUserInfoEndpointFilter filter;
+
 	private final HttpMessageConverter<OAuth2Error> errorHttpResponseConverter = new OAuth2ErrorHttpMessageConverter();
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		this.authenticationManager = mock(AuthenticationManager.class);
 		this.filter = new OidcUserInfoEndpointFilter(this.authenticationManager, DEFAULT_OIDC_USER_INFO_ENDPOINT_URI);
@@ -72,16 +78,33 @@ public class OidcUserInfoEndpointFilterTests {
 
 	@Test
 	public void constructorWhenAuthenticationManagerNullThenThrowIllegalArgumentException() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcUserInfoEndpointFilter(null))
-				.withMessage("authenticationManager cannot be null");
+		assertThatIllegalArgumentException().isThrownBy(() -> new OidcUserInfoEndpointFilter(null))
+			.withMessage("authenticationManager cannot be null");
 	}
 
 	@Test
 	public void constructorWhenUserInfoEndpointUriIsEmptyThenThrowIllegalArgumentException() {
 		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new OidcUserInfoEndpointFilter(this.authenticationManager, ""))
-				.withMessage("userInfoEndpointUri cannot be empty");
+			.isThrownBy(() -> new OidcUserInfoEndpointFilter(this.authenticationManager, ""))
+			.withMessage("userInfoEndpointUri cannot be empty");
+	}
+
+	@Test
+	public void setAuthenticationConverterWhenNullThenThrowIllegalArgumentException() {
+		assertThatIllegalArgumentException().isThrownBy(() -> this.filter.setAuthenticationConverter(null))
+			.withMessage("authenticationConverter cannot be null");
+	}
+
+	@Test
+	public void setAuthenticationSuccessHandlerWhenNullThenThrowIllegalArgumentException() {
+		assertThatIllegalArgumentException().isThrownBy(() -> this.filter.setAuthenticationSuccessHandler(null))
+			.withMessage("authenticationSuccessHandler cannot be null");
+	}
+
+	@Test
+	public void setAuthenticationFailureHandlerWhenNullThenThrowIllegalArgumentException() {
+		assertThatIllegalArgumentException().isThrownBy(() -> this.filter.setAuthenticationFailureHandler(null))
+			.withMessage("authenticationFailureHandler cannot be null");
 	}
 
 	@Test
@@ -125,8 +148,9 @@ public class OidcUserInfoEndpointFilterTests {
 		JwtAuthenticationToken principal = createJwtAuthenticationToken();
 		SecurityContextHolder.getContext().setAuthentication(principal);
 
-		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal, createUserInfo());
-		when(this.authenticationManager.authenticate(any())).thenReturn(authentication);
+		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal,
+				createUserInfo());
+		given(this.authenticationManager.authenticate(any())).willReturn(authentication);
 
 		String requestUri = DEFAULT_OIDC_USER_INFO_ENDPOINT_URI;
 		MockHttpServletRequest request = new MockHttpServletRequest(httpMethod, requestUri);
@@ -145,11 +169,21 @@ public class OidcUserInfoEndpointFilterTests {
 
 	@Test
 	public void doFilterWhenUserInfoRequestInvalidTokenThenUnauthorizedError() throws Exception {
+		doFilterWhenAuthenticationExceptionThenError(OAuth2ErrorCodes.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
+	}
+
+	@Test
+	public void doFilterWhenUserInfoRequestInsufficientScopeThenForbiddenError() throws Exception {
+		doFilterWhenAuthenticationExceptionThenError(OAuth2ErrorCodes.INSUFFICIENT_SCOPE, HttpStatus.FORBIDDEN);
+	}
+
+	private void doFilterWhenAuthenticationExceptionThenError(String oauth2ErrorCode, HttpStatus httpStatus)
+			throws Exception {
 		Authentication principal = new TestingAuthenticationToken("principal", "credentials");
 		SecurityContextHolder.getContext().setAuthentication(principal);
 
-		when(this.authenticationManager.authenticate(any()))
-				.thenThrow(new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_TOKEN));
+		given(this.authenticationManager.authenticate(any()))
+			.willThrow(new OAuth2AuthenticationException(oauth2ErrorCode));
 
 		String requestUri = DEFAULT_OIDC_USER_INFO_ENDPOINT_URI;
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
@@ -161,14 +195,87 @@ public class OidcUserInfoEndpointFilterTests {
 
 		verifyNoInteractions(filterChain);
 
-		assertThat(response.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED.value());
+		assertThat(response.getStatus()).isEqualTo(httpStatus.value());
 		OAuth2Error error = readError(response);
-		assertThat(error.getErrorCode()).isEqualTo(OAuth2ErrorCodes.INVALID_TOKEN);
+		assertThat(error.getErrorCode()).isEqualTo(oauth2ErrorCode);
+	}
+
+	@Test
+	public void doFilterWhenCustomAuthenticationConverterThenUsed() throws Exception {
+		Authentication principal = new TestingAuthenticationToken("principal", "credentials");
+		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal);
+		AuthenticationConverter authenticationConverter = mock(AuthenticationConverter.class);
+		this.filter.setAuthenticationConverter(authenticationConverter);
+
+		given(authenticationConverter.convert(any())).willReturn(authentication);
+		given(this.authenticationManager.authenticate(any()))
+			.willReturn(new OidcUserInfoAuthenticationToken(principal, createUserInfo()));
+
+		String requestUri = DEFAULT_OIDC_USER_INFO_ENDPOINT_URI;
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
+		request.setServletPath(requestUri);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		FilterChain filterChain = mock(FilterChain.class);
+
+		this.filter.doFilter(request, response, filterChain);
+
+		verifyNoInteractions(filterChain);
+		verify(authenticationConverter).convert(request);
+		verify(this.authenticationManager).authenticate(authentication);
+		assertUserInfoResponse(response.getContentAsString());
+	}
+
+	@Test
+	public void doFilterWhenCustomAuthenticationSuccessHandlerThenUsed() throws Exception {
+		AuthenticationSuccessHandler successHandler = mock(AuthenticationSuccessHandler.class);
+		this.filter.setAuthenticationSuccessHandler(successHandler);
+
+		Authentication principal = new TestingAuthenticationToken("principal", "credentials");
+		SecurityContextHolder.getContext().setAuthentication(principal);
+
+		OidcUserInfoAuthenticationToken authentication = new OidcUserInfoAuthenticationToken(principal,
+				createUserInfo());
+		given(this.authenticationManager.authenticate(any())).willReturn(authentication);
+
+		String requestUri = DEFAULT_OIDC_USER_INFO_ENDPOINT_URI;
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
+		request.setServletPath(requestUri);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		FilterChain filterChain = mock(FilterChain.class);
+
+		this.filter.doFilter(request, response, filterChain);
+
+		verifyNoInteractions(filterChain);
+		verify(successHandler).onAuthenticationSuccess(request, response, authentication);
+	}
+
+	@Test
+	public void doFilterWhenCustomAuthenticationFailureHandlerThenUsed() throws Exception {
+		AuthenticationFailureHandler failureHandler = mock(AuthenticationFailureHandler.class);
+		this.filter.setAuthenticationFailureHandler(failureHandler);
+
+		Authentication principal = new TestingAuthenticationToken("principal", "credentials");
+		SecurityContextHolder.getContext().setAuthentication(principal);
+
+		OAuth2AuthenticationException authenticationException = new OAuth2AuthenticationException(
+				OAuth2ErrorCodes.INVALID_TOKEN);
+		given(this.authenticationManager.authenticate(any())).willThrow(authenticationException);
+
+		String requestUri = DEFAULT_OIDC_USER_INFO_ENDPOINT_URI;
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
+		request.setServletPath(requestUri);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		FilterChain filterChain = mock(FilterChain.class);
+
+		this.filter.doFilter(request, response, filterChain);
+
+		verifyNoInteractions(filterChain);
+		verify(failureHandler).onAuthenticationFailure(request, response, authenticationException);
 	}
 
 	private OAuth2Error readError(MockHttpServletResponse response) throws Exception {
-		MockClientHttpResponse httpResponse = new MockClientHttpResponse(
-				response.getContentAsByteArray(), HttpStatus.valueOf(response.getStatus()));
+		MockClientHttpResponse httpResponse = new MockClientHttpResponse(response.getContentAsByteArray(),
+				HttpStatus.valueOf(response.getStatus()));
 		return this.errorHttpResponseConverter.read(OAuth2Error.class, httpResponse);
 	}
 
@@ -187,27 +294,27 @@ public class OidcUserInfoEndpointFilterTests {
 
 	private static OidcUserInfo createUserInfo() {
 		return OidcUserInfo.builder()
-				.subject("user1")
-				.name("First Last")
-				.givenName("First")
-				.familyName("Last")
-				.middleName("Middle")
-				.nickname("User")
-				.preferredUsername("user")
-				.profile("https://example.com/user1")
-				.picture("https://example.com/user1.jpg")
-				.website("https://example.com")
-				.email("user1@example.com")
-				.emailVerified(true)
-				.gender("female")
-				.birthdate("1970-01-01")
-				.zoneinfo("Europe/Paris")
-				.locale("en-US")
-				.phoneNumber("+1 (604) 555-1234;ext=5678")
-				.phoneNumberVerified("false")
-				.address("Champ de Mars\n5 Av. Anatole France\n75007 Paris\nFrance")
-				.updatedAt("1970-01-01T00:00:00Z")
-				.build();
+			.subject("user1")
+			.name("First Last")
+			.givenName("First")
+			.familyName("Last")
+			.middleName("Middle")
+			.nickname("User")
+			.preferredUsername("user")
+			.profile("https://example.com/user1")
+			.picture("https://example.com/user1.jpg")
+			.website("https://example.com")
+			.email("user1@example.com")
+			.emailVerified(true)
+			.gender("female")
+			.birthdate("1970-01-01")
+			.zoneinfo("Europe/Paris")
+			.locale("en-US")
+			.phoneNumber("+1 (604) 555-1234;ext=5678")
+			.phoneNumberVerified(false)
+			.address("Champ de Mars\n5 Av. Anatole France\n75007 Paris\nFrance")
+			.updatedAt("1970-01-01T00:00:00Z")
+			.build();
 	}
 
 	private static void assertUserInfoResponse(String userInfoResponse) {
@@ -228,8 +335,9 @@ public class OidcUserInfoEndpointFilterTests {
 		assertThat(userInfoResponse).contains("\"zoneinfo\":\"Europe/Paris\"");
 		assertThat(userInfoResponse).contains("\"locale\":\"en-US\"");
 		assertThat(userInfoResponse).contains("\"phone_number\":\"+1 (604) 555-1234;ext=5678\"");
-		assertThat(userInfoResponse).contains("\"phone_number_verified\":\"false\"");
-		assertThat(userInfoResponse).contains("\"address\":\"Champ de Mars\\n5 Av. Anatole France\\n75007 Paris\\nFrance\"");
+		assertThat(userInfoResponse).contains("\"phone_number_verified\":false");
+		assertThat(userInfoResponse)
+			.contains("\"address\":\"Champ de Mars\\n5 Av. Anatole France\\n75007 Paris\\nFrance\"");
 		assertThat(userInfoResponse).contains("\"updated_at\":\"1970-01-01T00:00:00Z\"");
 	}
 

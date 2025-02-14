@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.springframework.security.oauth2.server.authorization.web.authenticat
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
@@ -33,8 +33,10 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 
 /**
- * Attempts to extract an Access Token Request from {@link HttpServletRequest} for the OAuth 2.0 Authorization Code Grant
- * and then converts it to an {@link OAuth2AuthorizationCodeAuthenticationToken} used for authenticating the authorization grant.
+ * Attempts to extract an Access Token Request from {@link HttpServletRequest} for the
+ * OAuth 2.0 Authorization Code Grant and then converts it to an
+ * {@link OAuth2AuthorizationCodeAuthenticationToken} used for authenticating the
+ * authorization grant.
  *
  * @author Joe Grandja
  * @since 0.1.2
@@ -47,49 +49,44 @@ public final class OAuth2AuthorizationCodeAuthenticationConverter implements Aut
 	@Nullable
 	@Override
 	public Authentication convert(HttpServletRequest request) {
+		MultiValueMap<String, String> parameters = OAuth2EndpointUtils.getFormParameters(request);
+
 		// grant_type (REQUIRED)
-		String grantType = request.getParameter(OAuth2ParameterNames.GRANT_TYPE);
+		String grantType = parameters.getFirst(OAuth2ParameterNames.GRANT_TYPE);
 		if (!AuthorizationGrantType.AUTHORIZATION_CODE.getValue().equals(grantType)) {
 			return null;
 		}
 
 		Authentication clientPrincipal = SecurityContextHolder.getContext().getAuthentication();
 
-		MultiValueMap<String, String> parameters = OAuth2EndpointUtils.getParameters(request);
-
 		// code (REQUIRED)
 		String code = parameters.getFirst(OAuth2ParameterNames.CODE);
-		if (!StringUtils.hasText(code) ||
-				parameters.get(OAuth2ParameterNames.CODE).size() != 1) {
-			OAuth2EndpointUtils.throwError(
-					OAuth2ErrorCodes.INVALID_REQUEST,
-					OAuth2ParameterNames.CODE,
+		if (!StringUtils.hasText(code) || parameters.get(OAuth2ParameterNames.CODE).size() != 1) {
+			OAuth2EndpointUtils.throwError(OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ParameterNames.CODE,
 					OAuth2EndpointUtils.ACCESS_TOKEN_REQUEST_ERROR_URI);
 		}
 
 		// redirect_uri (REQUIRED)
-		// Required only if the "redirect_uri" parameter was included in the authorization request
+		// Required only if the "redirect_uri" parameter was included in the authorization
+		// request
 		String redirectUri = parameters.getFirst(OAuth2ParameterNames.REDIRECT_URI);
-		if (StringUtils.hasText(redirectUri) &&
-				parameters.get(OAuth2ParameterNames.REDIRECT_URI).size() != 1) {
-			OAuth2EndpointUtils.throwError(
-					OAuth2ErrorCodes.INVALID_REQUEST,
-					OAuth2ParameterNames.REDIRECT_URI,
+		if (StringUtils.hasText(redirectUri) && parameters.get(OAuth2ParameterNames.REDIRECT_URI).size() != 1) {
+			OAuth2EndpointUtils.throwError(OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ParameterNames.REDIRECT_URI,
 					OAuth2EndpointUtils.ACCESS_TOKEN_REQUEST_ERROR_URI);
 		}
 
 		Map<String, Object> additionalParameters = new HashMap<>();
 		parameters.forEach((key, value) -> {
-			if (!key.equals(OAuth2ParameterNames.GRANT_TYPE) &&
-					!key.equals(OAuth2ParameterNames.CLIENT_ID) &&
-					!key.equals(OAuth2ParameterNames.CODE) &&
-					!key.equals(OAuth2ParameterNames.REDIRECT_URI)) {
-				additionalParameters.put(key, value.get(0));
+			if (!key.equals(OAuth2ParameterNames.GRANT_TYPE) && !key.equals(OAuth2ParameterNames.CLIENT_ID)
+					&& !key.equals(OAuth2ParameterNames.CODE) && !key.equals(OAuth2ParameterNames.REDIRECT_URI)) {
+				additionalParameters.put(key, (value.size() == 1) ? value.get(0) : value.toArray(new String[0]));
 			}
 		});
 
-		return new OAuth2AuthorizationCodeAuthenticationToken(
-				code, clientPrincipal, redirectUri, additionalParameters);
+		// Validate DPoP Proof HTTP Header (if available)
+		OAuth2EndpointUtils.validateAndAddDPoPParametersIfAvailable(request, additionalParameters);
+
+		return new OAuth2AuthorizationCodeAuthenticationToken(code, clientPrincipal, redirectUri, additionalParameters);
 	}
 
 }
